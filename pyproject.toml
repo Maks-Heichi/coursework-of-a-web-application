@@ -1,0 +1,71 @@
+[tool.poetry]
+package-mode = false
+
+[project]
+name = "coursework-web-application"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Maks-Heichi",email = "mister.max1988@yandex.ru"}
+]
+requires-python = ">=3.14,<4.0"
+dependencies = [
+    "django (>=6.0,<6.1)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "python-dotenv (>=1.2.3,<2.0.0)",
+    "djangorestframework (>=3.18.0,<4.0.0)",
+    "pillow (>=12.3.0,<13.0.0)",
+    "djangorestframework-simplejwt (>=5.5.1,<6.0.0)",
+    "drf-yasg (>=1.21.15,<2.0.0)",
+    "django-cors-headers (>=4.9.0,<5.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "coverage (>=7.15.4,<8.0.0)",
+    "celery (>=5.6.3,<6.0.0)",
+    "redis (>=8.1.0,<9.0.0)",
+    "django-celery-beat (>=2.9.0,<3.0.0)",
+    "eventlet (>=0.41.2,<0.42.0)",
+    "pytelegrambotapi (>=4.36.1,<5.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+lint = [
+    "flake8 (>=7.3.0,<8.0.0)",
+    "mypy (>=2.3.1,<3.0.0)",
+    "black (>=26.5.1,<27.0.0)",
+    "isort (>=8.0.1,<9.0.0)"
+]
+
+[tool.mypy]
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+exclude = 'venv'
+
+[tool.black]
+# Максимальная длина строки
+line-length = 119
+# Файлы, которые не нужно форматировать
+exclude = '''
+(
+  /(
+      \.eggs         # Исключить несколько общих каталогов 
+    | \.git          # в корне проекта
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | dist
+  )/
+  | foo.py           # Также отдельно исключить файл с именем foo.py
+                     # в корне проекта
+)
+'''
+
+[tool.isort]
+# максимальная длина строки
+line_length = 119
