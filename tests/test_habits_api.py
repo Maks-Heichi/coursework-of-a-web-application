@@ -60,6 +60,22 @@ class HabitAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_habit_with_zero_periodicity_fails(self):
+        """Проверяет запрет periodicity=0."""
+        payload = {
+            "place": "Дом",
+            "time": "10:00:00",
+            "action": "Чтение",
+            "is_pleasant": False,
+            "periodicity": 0,
+            "execution_time": 60,
+            "is_public": False,
+        }
+
+        response = self.client.post("/habits/create/", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_habit_list_returns_only_current_user_habits(self):
         """Проверяет, что пользователь видит только свои привычки."""
         Habit.objects.create(

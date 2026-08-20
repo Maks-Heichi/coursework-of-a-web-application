@@ -24,15 +24,13 @@ class HabitSerializer(serializers.ModelSerializer):
         owner = request.user if request else getattr(self.instance, "user", None)
 
         if reward and related_habit:
-            raise serializers.ValidationError(
-                "Нельзя одновременно указывать и вознаграждение, и связанную привычку."
-            )
+            raise serializers.ValidationError("Нельзя одновременно указывать и вознаграждение, и связанную привычку.")
 
         if execution_time and execution_time > 120:
             raise serializers.ValidationError("Время выполнения должно быть не больше 120 секунд.")
 
-        if periodicity and periodicity > 7:
-            raise serializers.ValidationError("Нельзя выполнять привычку реже, чем 1 раз в 7 дней.")
+        if periodicity is not None and (periodicity < 1 or periodicity > 7):
+            raise serializers.ValidationError("Периодичность должна быть от 1 до 7 дней.")
 
         if related_habit and not related_habit.is_pleasant:
             raise serializers.ValidationError("В связанные привычки могут попадать только приятные привычки.")

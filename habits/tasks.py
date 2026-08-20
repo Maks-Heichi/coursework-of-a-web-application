@@ -1,7 +1,7 @@
 """Celery-задачи для привычек."""
 
-from datetime import date
 import logging
+from datetime import date
 
 import requests
 from django.conf import settings
@@ -59,10 +59,11 @@ def send_habit_reminders():
         if not _is_habit_due(habit, today):
             continue
 
-        sent = _send_telegram_message(
-            habit.user.telegram_chat_id,
-            f"Напоминание: в {current_time.strftime('%H:%M')} нужно выполнить привычку '{habit.action}' в '{habit.place}'.",
+        reminder_text = (
+            f"Напоминание: в {current_time.strftime('%H:%M')} "
+            f"нужно выполнить привычку '{habit.action}' в '{habit.place}'."
         )
+        sent = _send_telegram_message(habit.user.telegram_chat_id, reminder_text)
         if sent:
             habit.last_notification_date = today
             habit.save(update_fields=["last_notification_date"])
@@ -70,6 +71,9 @@ def send_habit_reminders():
 
 def _is_habit_due(habit, today: date):
     """Проверяет, нужно ли сегодня напоминать о привычке."""
+    if habit.periodicity < 1:
+        return False
+
     start_date = habit.created_at.date()
     days_since_creation = (today - start_date).days
     return days_since_creation % habit.periodicity == 0
