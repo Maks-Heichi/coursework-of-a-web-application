@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -25,7 +26,11 @@ class Habit(models.Model):
         related_name="dependent_habits",
         verbose_name="Связанная привычка",
     )
-    periodicity = models.PositiveSmallIntegerField(default=1, verbose_name="Периодичность в днях")
+    periodicity = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(7)],
+        verbose_name="Периодичность в днях",
+    )
     reward = models.CharField(max_length=255, blank=True, null=True, verbose_name="Вознаграждение")
     execution_time = models.PositiveSmallIntegerField(verbose_name="Время выполнения в секундах")
     is_public = models.BooleanField(default=False, verbose_name="Признак публичности")
@@ -48,8 +53,8 @@ class Habit(models.Model):
         if self.execution_time > 120:
             raise ValidationError("Время выполнения должно быть не больше 120 секунд.")
 
-        if self.periodicity > 7:
-            raise ValidationError("Нельзя выполнять привычку реже, чем 1 раз в 7 дней.")
+        if self.periodicity < 1 or self.periodicity > 7:
+            raise ValidationError("Периодичность должна быть от 1 до 7 дней.")
 
         if self.related_habit and not self.related_habit.is_pleasant:
             raise ValidationError("В связанные привычки могут попадать только привычки с признаком приятной.")
