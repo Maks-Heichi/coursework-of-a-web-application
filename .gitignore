@@ -1,0 +1,44 @@
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables (не коммитим секреты)
+.env
+.env.*
+!.env.template
+
+# Python cache / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Coverage / tests
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# Django runtime artifacts
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Celery beat schedule (Windows часто создаёт такие файлы)
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat-schedule-*
+
+# Media/static generated
+media/
+staticfiles/
+
+# OS files
+.DS_Store
