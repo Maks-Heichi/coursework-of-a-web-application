@@ -10,72 +10,118 @@
 - валидаторы
 - Celery + Redis
 - напоминания в Telegram
+- Docker Compose (Django, PostgreSQL, Redis, Celery, Nginx)
+- CI/CD через GitHub Actions
 
-## База данных
+## Запуск через Docker Compose (рекомендуется)
 
-Используется PostgreSQL.
+Нужен [Docker Desktop](https://www.docker.com/products/docker-desktop/) или Docker + Compose на Linux.
 
-Нужно создать базу `coursework_web_app` и заполнить `.env`.
+1. Скопируй шаблон окружения:
+   ```bash
+   copy .env.template .env
+   ```
+2. Заполни `.env`:
+   - `SECRET_KEY` (обязательно)
+   - `POSTGRES_*` и `DB_*` (пароль одинаковый)
+   - для Docker: `DB_HOST=db`, `CELERY_BROKER_URL=redis://redis:6379/0`
+   - Telegram: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+   - в `ALLOWED_HOSTS` добавь IP сервера при деплое
+3. Запуск одной командой:
+   ```bash
+   docker compose up --build
+   ```
+   Фоном:
+   ```bash
+   docker compose up -d --build
+   ```
 
-Шаблон:
+Сервисы:
+- **nginx** — вход (`http://localhost`), reverse-proxy
+- **web** — Django + Gunicorn (`expose 8000`)
+- **db** — PostgreSQL (`expose 5432`)
+- **redis** — брокер Celery (`expose 6379`)
+- **celery** / **celery_beat** — фоновые задачи
 
+У сервисов `restart: unless-stopped`.
+
+Остановка:
 ```bash
-copy .env.template .env
+docker compose down
 ```
 
-Потом применить миграции:
+Ссылки после запуска:
+- API / Swagger: `http://localhost/swagger/`
+- Admin: `http://localhost/admin/`
 
-```bash
-poetry run python manage.py migrate
-```
+## CI/CD (GitHub Actions)
 
-## Запуск проекта
+Файл: `.github/workflows/ci.yml`
 
-Через Poetry:
+Порядок: **test → lint → build → deploy**
+
+- `push` / `pull_request` — test, lint, build
+- `deploy` — только при push в `coursework-docker-ci` или `develop`
+
+### Secrets (Settings → Secrets and variables → Actions)
+
+| Secret | Пример |
+|--------|--------|
+| `SSH_KEY` | приватный ключ (`id_rsa`) |
+| `SSH_USER` | `student` или `coursework` |
+| `SERVER_IP` | публичный IP ВМ |
+| `DEPLOY_DIR` | `/home/student/coursework-of-a-web-application` |
+
+### Сервер
+
+1. Ubuntu + Docker + Compose:
+   ```bash
+   sudo apt update
+   sudo apt install -y docker.io docker-compose-v2
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker $USER
+   ```
+   Перелогиниться, проверить `docker ps`.
+2. Клон:
+   ```bash
+   git clone https://github.com/Maks-Heichi/coursework-of-a-web-application.git
+   cd coursework-of-a-web-application
+   git checkout coursework-docker-ci
+   cp .env.template .env
+   nano .env
+   ```
+3. `docker compose up -d --build`
+4. Группа безопасности: **TCP 22**, **TCP 80** (8000 наружу не открывать).
+
+После успешного Actions сайт: `http://IP_СЕРВЕРА/swagger/`
+
+## Запуск без Docker (локально)
 
 ```bash
 poetry install
 copy .env.template .env
+```
+
+В `.env` для локального запуска без Docker:
+- `DB_HOST=127.0.0.1`
+- `CELERY_BROKER_URL=redis://localhost:6379/0`
+- `CELERY_RESULT_BACKEND=redis://localhost:6379/0`
+
+```bash
 poetry run python manage.py migrate
 poetry run python manage.py runserver
 ```
 
-Через requirements:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
-## Redis и Celery
-
-Отдельно нужно запустить Redis.
-
-Потом в одном терминале:
+Redis отдельно, затем:
 
 ```bash
 poetry run celery -A config worker -l info -P eventlet
-```
-
-Во втором:
-
-```bash
 poetry run celery -A config beat -l info
 ```
 
 ## Telegram
 
-Нужно создать бота через `@BotFather`, получить токен и `chat_id`, потом добавить их в `.env`.
-
-## Ссылки
-
-- API: `http://127.0.0.1:8000/`
-- Swagger: `http://127.0.0.1:8000/swagger/`
-- Redoc: `http://127.0.0.1:8000/redoc/`
-- Admin: `http://127.0.0.1:8000/admin/`
+Создай бота через `@BotFather`, добавь токен и `chat_id` в `.env`.
 
 ## Эндпоинты
 
@@ -85,74 +131,19 @@ poetry run celery -A config beat -l info
 - `POST /token/refresh/`
 
 С авторизацией:
-- `GET /users/`
-- `GET /users/{id}/`
-- `PUT/PATCH /users/{id}/update/`
-- `DELETE /users/{id}/delete/`
-- `GET /habits/`
-- `POST /habits/create/`
-- `GET /habits/{id}/`
-- `PUT/PATCH /habits/{id}/update/`
-- `DELETE /habits/{id}/delete/`
+- `GET/POST /habits/`, CRUD привычек
 - `GET /habits/public/`
-
-## Пример создания привычки
-
-```json
-{
-  "place": "Дом",
-  "time": "20:22:00",
-  "action": "Выпить стакан воды",
-  "is_pleasant": false,
-  "related_habit": null,
-  "periodicity": 1,
-  "reward": "Похвалить себя",
-  "execution_time": 60,
-  "is_public": true
-}
-```
-
-## Валидаторы
-
-- нельзя указывать и `reward`, и `related_habit` одновременно
-- время выполнения не больше 120 секунд
-- периодичность должна быть от 1 до 7 дней
-- в связанную привычку можно передавать только приятную
-- приятная привычка не может иметь награду или связанную привычку
 
 ## Тесты
 
 ```bash
 poetry run python manage.py test
-poetry run coverage run manage.py test
-poetry run coverage report
 ```
 
-Покрытие сейчас около `90%`.
+## Файлы Docker / CI
 
-## Файлы проекта
-
-- **manage.py** — команды Django
-- **pyproject.toml** — зависимости Poetry
-- **requirements.txt** — зависимости для `pip install -r requirements.txt`
-- **.env.template** — шаблон переменных окружения
-- **.env** — локальные секреты и настройки
-- **.flake8** — настройки flake8
-**config/settings.py** — настройки проекта, PostgreSQL, DRF, JWT, Celery  
-**config/urls.py** — главные маршруты  
-**config/celery.py** — конфигурация Celery  
-**config/wsgi.py** — запуск на сервере  
-**config/asgi.py** — асинхронный запуск  
-**users/models.py** — кастомный пользователь  
-**users/managers.py** — менеджер пользователей  
-**users/serializers.py** — сериализаторы регистрации и профиля  
-**users/views.py** — API пользователей и JWT  
-**users/urls.py** — маршруты пользователей  
-**habits/models.py** — модель привычки  
-**habits/serializers.py** — сериализаторы привычек  
-**habits/views.py** — CRUD и публичный список привычек  
-**habits/tasks.py** — Celery-задача напоминаний  
-**habits/paginators.py** — пагинация по 5 элементов  
-**habits/permissions.py** — доступ только владельцу  
-**tests/test_users_api.py** — тесты пользователей  
-**tests/test_habits_api.py** — тесты привычек
+- `Dockerfile` — образ Django/Celery/Gunicorn
+- `nginx/` — Nginx reverse-proxy
+- `docker-compose.yml` — все сервисы
+- `.github/workflows/ci.yml` — pipeline
+- `.env.template` — шаблон окружения (`.env` в git не попадает)

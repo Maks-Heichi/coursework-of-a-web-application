@@ -8,6 +8,13 @@ from habits.permissions import IsOwner
 from habits.serializers import HabitSerializer
 
 
+def _owner_habits_queryset(view):
+    """Queryset привычек владельца; пустой при генерации Swagger-схемы."""
+    if getattr(view, "swagger_fake_view", False):
+        return Habit.objects.none()
+    return Habit.objects.filter(user=view.request.user).select_related("user", "related_habit")
+
+
 class HabitCreateAPIView(generics.CreateAPIView):
     """Создание привычки текущего пользователя."""
 
@@ -25,7 +32,7 @@ class HabitListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Habit.objects.filter(user=self.request.user).select_related("user", "related_habit")
+        return _owner_habits_queryset(self)
 
 
 class PublicHabitListAPIView(generics.ListAPIView):
@@ -45,7 +52,7 @@ class HabitRetrieveAPIView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        return Habit.objects.filter(user=self.request.user).select_related("user", "related_habit")
+        return _owner_habits_queryset(self)
 
 
 class HabitUpdateAPIView(generics.UpdateAPIView):
@@ -55,7 +62,7 @@ class HabitUpdateAPIView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        return Habit.objects.filter(user=self.request.user).select_related("user", "related_habit")
+        return _owner_habits_queryset(self)
 
 
 class HabitDestroyAPIView(generics.DestroyAPIView):
@@ -65,4 +72,4 @@ class HabitDestroyAPIView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        return Habit.objects.filter(user=self.request.user)
+        return _owner_habits_queryset(self)
